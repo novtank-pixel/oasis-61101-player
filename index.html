@@ -468,7 +468,7 @@ document.getElementById('key-input').addEventListener('keydown', function (e) {
 
 function loadList() {
   npStatus.textContent = '音声の一覧を読み込み中…';
-  if (!KEY) { askKey(''); npStatus.textContent = ''; return; }
+  // 合言葉は無しで開く（2026-10-17 笠井さん）。音声側が合言葉を求めた時だけ入力欄を出す
   fetch(AUDIO_API + '?api=list&book=' + BOOK + '&key=' + encodeURIComponent(KEY))
     .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
     .then(function (txt) {
