@@ -149,7 +149,6 @@
     padding: 8px 6px;
     font-size: 12px;
   }
-  .ab-info { width: 100%; text-align: center; font-size: 12px; color: var(--text-dim); margin-top: 6px; font-variant-numeric: tabular-nums; }
 
   .btn {
     background: var(--panel-2);
@@ -198,14 +197,6 @@
     background: linear-gradient(90deg, var(--accent), var(--accent-2));
     border-radius: 7px;
     transition: width 0.1s linear;
-  }
-  .ab-marker {
-    position: absolute; top: 0; height: 100%;
-    width: 3px; background: var(--warn); z-index: 2;
-  }
-  .ab-region {
-    position: absolute; top: 0; height: 100%;
-    background: rgba(255, 200, 87, 0.3); z-index: 1;
   }
   .time {
     display: flex; justify-content: space-between;
@@ -290,17 +281,6 @@
   </div>
 
   <div class="panel">
-    <h3>区間リピート（A-B）</h3>
-    <div class="ab-row">
-      <button class="btn toggle warn" id="btn-set-a">A点</button>
-      <button class="btn toggle warn" id="btn-set-b">B点</button>
-      <button class="btn" id="btn-clear-ab">解除</button>
-      <button class="btn toggle" id="btn-loop-ab">ループ OFF</button>
-      <div class="ab-info" id="ab-info">A: -- ／ B: --</div>
-    </div>
-  </div>
-
-  <div class="panel">
     <h3>リピート設定</h3>
     <div class="ab-row">
       <button class="btn toggle" id="btn-loop-track">1曲リピート OFF</button>
@@ -312,9 +292,6 @@
 
 <div class="player-bar">
   <div class="progress" id="progress">
-    <div class="ab-region" id="ab-region" style="display:none;"></div>
-    <div class="ab-marker" id="ab-a" style="display:none;"></div>
-    <div class="ab-marker" id="ab-b" style="display:none;"></div>
     <div class="progress-bar" id="progress-bar"></div>
   </div>
   <div class="time">
@@ -362,21 +339,12 @@ var btnNext = document.getElementById('btn-next');
 var btnBack5 = document.getElementById('btn-back5');
 var btnFwd5 = document.getElementById('btn-fwd5');
 var speedDisplay = document.getElementById('speed-display');
-var btnSetA = document.getElementById('btn-set-a');
-var btnSetB = document.getElementById('btn-set-b');
-var btnClearAB = document.getElementById('btn-clear-ab');
-var btnLoopAB = document.getElementById('btn-loop-ab');
 var btnLoopTrack = document.getElementById('btn-loop-track');
 var btnLoopAll = document.getElementById('btn-loop-all');
 var btnAutonext = document.getElementById('btn-autonext');
-var abInfo = document.getElementById('ab-info');
-var abRegion = document.getElementById('ab-region');
-var abAEl = document.getElementById('ab-a');
-var abBEl = document.getElementById('ab-b');
 
 var currentIdx = -1;
-var pointA = null, pointB = null;
-var loopAB = false, loopTrack = false, loopAll = false, autonext = true;
+var loopTrack = false, loopAll = false, autonext = true;
 
 function fmt(t) {
   if (!isFinite(t) || t == null) return '0:00';
@@ -501,7 +469,6 @@ function loadTrack(idx, autoplay) {
   npTitle.textContent = name;
   document.title = '▶ ' + name + ' ｜ 英単語1000語';
   currentTab = playlist[idx][3];
-  resetAB();
   renderTracks();
   if (audioCache[fileId]) {
     audio.src = audioCache[fileId];
@@ -546,9 +513,6 @@ audio.addEventListener('timeupdate', function () {
   var pct = (audio.currentTime / audio.duration) * 100;
   progressBar.style.width = (pct || 0) + '%';
   timeCur.textContent = fmt(audio.currentTime);
-  if (loopAB && pointA != null && pointB != null && audio.currentTime >= pointB) {
-    audio.currentTime = pointA;
-  }
 });
 audio.addEventListener('ended', function () {
   if (loopTrack) { audio.currentTime = 0; audio.play().catch(function () {}); return; }
@@ -602,53 +566,6 @@ function setSpeed(s) {
   }
 }
 
-function updateABDisplay() {
-  if (pointA != null && audio.duration) {
-    abAEl.style.display = 'block';
-    abAEl.style.left = ((pointA / audio.duration) * 100) + '%';
-  } else { abAEl.style.display = 'none'; }
-  if (pointB != null && audio.duration) {
-    abBEl.style.display = 'block';
-    abBEl.style.left = ((pointB / audio.duration) * 100) + '%';
-  } else { abBEl.style.display = 'none'; }
-  if (pointA != null && pointB != null && audio.duration) {
-    abRegion.style.display = 'block';
-    abRegion.style.left = ((pointA / audio.duration) * 100) + '%';
-    abRegion.style.width = (((pointB - pointA) / audio.duration) * 100) + '%';
-  } else { abRegion.style.display = 'none'; }
-  abInfo.textContent = 'A: ' + (pointA != null ? fmt(pointA) : '--') + ' ／ B: ' + (pointB != null ? fmt(pointB) : '--');
-}
-
-function resetAB() {
-  pointA = null; pointB = null; loopAB = false;
-  btnLoopAB.classList.remove('on');
-  btnLoopAB.textContent = 'ループ OFF';
-  btnSetA.classList.remove('on');
-  btnSetB.classList.remove('on');
-  updateABDisplay();
-}
-
-btnSetA.addEventListener('click', function () {
-  pointA = audio.currentTime;
-  if (pointB != null && pointA >= pointB) pointB = null;
-  btnSetA.classList.add('on');
-  if (pointB == null) btnSetB.classList.remove('on');
-  updateABDisplay();
-});
-btnSetB.addEventListener('click', function () {
-  if (pointA == null) { alert('先にA点をセットしてください'); return; }
-  if (audio.currentTime <= pointA) { alert('B点はA点より後でセットしてください'); return; }
-  pointB = audio.currentTime;
-  btnSetB.classList.add('on');
-  updateABDisplay();
-});
-btnClearAB.addEventListener('click', resetAB);
-btnLoopAB.addEventListener('click', function () {
-  if (pointA == null || pointB == null) { alert('A点とB点をセットしてください'); return; }
-  loopAB = !loopAB;
-  btnLoopAB.classList.toggle('on', loopAB);
-  btnLoopAB.textContent = loopAB ? 'ループ ON' : 'ループ OFF';
-});
 
 btnLoopTrack.addEventListener('click', function () {
   loopTrack = !loopTrack;
@@ -682,9 +599,6 @@ document.addEventListener('keydown', function (e) {
       break;
     case 'ArrowUp': e.preventDefault(); audio.volume = Math.min(1, audio.volume + 0.05); break;
     case 'ArrowDown': e.preventDefault(); audio.volume = Math.max(0, audio.volume - 0.05); break;
-    case 'KeyA': btnSetA.click(); break;
-    case 'KeyB': btnSetB.click(); break;
-    case 'KeyL': btnLoopAB.click(); break;
     case 'KeyR': btnLoopTrack.click(); break;
     case 'KeyS': btnRestart.click(); break;
     case 'Minus': setSpeed(Math.max(0.5, audio.playbackRate - 0.05)); break;
